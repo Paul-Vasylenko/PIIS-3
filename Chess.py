@@ -1,5 +1,6 @@
 import chess
 import random as rd
+from constants import pawntable, knightstable, bishopstable, bookstable, rookstable, queenstable, kingstable
 
 class AIEngine:
 
@@ -8,31 +9,56 @@ class AIEngine:
         self.maxDepth = maxDepth
         self.color = color
 
-    def estimatePieceCost(self, square):
-        pieceCost = 0
-        pieceType = self.board.piece_type_at(square)
-        if (pieceType == chess.PAWN):
-            pieceCost = 1
-        if (pieceType == chess.ROOK):
-            pieceCost = 5.1
-        if (pieceType == chess.BISHOP):
-            pieceCost = 3.33
-        if (pieceType == chess.KNIGHT):
-            pieceCost = 3.2
-        if (pieceType == chess.QUEEN):
-            pieceCost = 8.8
-
-        if (self.board.color_at(square)!=self.color):
-            return -pieceCost
-        return pieceCost
-
     def evaluate(self):
-        compt = 0
-        #Sums up the material values
-        for i in range(64):
-            compt+=self.estimatePieceCost(chess.SQUARES[i])
-        compt += self.mateOpportunity() + self.openning() + 0.001*rd.random()
-        return compt
+        board = self.board
+        if board.is_checkmate():
+            if board.turn:
+                return -9999
+            else:
+                return 9999
+        if board.is_stalemate():
+            return 0
+        if board.is_insufficient_material():
+            return 0
+        
+        wp = len(board.pieces(chess.PAWN, chess.WHITE))
+        bp = len(board.pieces(chess.PAWN, chess.BLACK))
+        wn = len(board.pieces(chess.KNIGHT, chess.WHITE))
+        bn = len(board.pieces(chess.KNIGHT, chess.BLACK))
+        wb = len(board.pieces(chess.BISHOP, chess.WHITE))
+        bb = len(board.pieces(chess.BISHOP, chess.BLACK))
+        wr = len(board.pieces(chess.ROOK, chess.WHITE))
+        br = len(board.pieces(chess.ROOK, chess.BLACK))
+        wq = len(board.pieces(chess.QUEEN, chess.WHITE))
+        bq = len(board.pieces(chess.QUEEN, chess.BLACK))
+        
+        material = 100*(wp-bp)+320*(wn-bn)+330*(wb-bb)+500*(wr-br)+900*(wq-bq)
+        
+        pawnsq = sum([pawntable[i] for i in board.pieces(chess.PAWN, chess.WHITE)])
+        pawnsq= pawnsq + sum([-pawntable[chess.square_mirror(i)] 
+                                        for i in board.pieces(chess.PAWN, chess.BLACK)])
+        knightsq = sum([knightstable[i] for i in board.pieces(chess.KNIGHT, chess.WHITE)])
+        knightsq = knightsq + sum([-knightstable[chess.square_mirror(i)] 
+                                        for i in board.pieces(chess.KNIGHT, chess.BLACK)])
+        bishopsq= sum([bishopstable[i] for i in board.pieces(chess.BISHOP, chess.WHITE)])
+        bishopsq= bishopsq + sum([-bishopstable[chess.square_mirror(i)] 
+                                        for i in board.pieces(chess.BISHOP, chess.BLACK)])
+        rooksq = sum([rookstable[i] for i in board.pieces(chess.ROOK, chess.WHITE)]) 
+        rooksq = rooksq + sum([-rookstable[chess.square_mirror(i)] 
+                                        for i in board.pieces(chess.ROOK, chess.BLACK)])
+        queensq = sum([queenstable[i] for i in board.pieces(chess.QUEEN, chess.WHITE)]) 
+        queensq = queensq + sum([-queenstable[chess.square_mirror(i)] 
+                                        for i in board.pieces(chess.QUEEN, chess.BLACK)])
+        kingsq = sum([kingstable[i] for i in board.pieces(chess.KING, chess.WHITE)]) 
+        kingsq = kingsq + sum([-kingstable[chess.square_mirror(i)] 
+                                        for i in board.pieces(chess.KING, chess.BLACK)])
+    
+        eval = material + pawnsq + knightsq + bishopsq + rooksq + queensq + kingsq
+
+        if board.turn:
+            return eval
+        else:
+            return -eval
 
     def negaMax(self, depth):
         bestMove = chess.Move.null()
@@ -85,25 +111,6 @@ class AIEngine:
             self.board.pop()
         return [bestValue, bestMove]
 
-    def mateOpportunity(self):
-        if (self.board.legal_moves.count()==0):
-            if (self.board.turn == self.color):
-                return -999
-            else:
-                return 999
-        else:
-            return 0
-
-    #to make the engine developp in the first moves
-    def openning(self):
-        if (self.board.fullmove_number<10):
-            if (self.board.turn == self.color):
-                return 1/30 * self.board.legal_moves.count()
-            else:
-                return -1/30 * self.board.legal_moves.count()
-        else:
-            return 0
-
 class GameEngine:
     def __init__(self, board: chess.Board):
         self.board = board
@@ -148,6 +155,8 @@ class GameEngine:
                 self.playAIMove(maxDepth, aiColor, method, alpha, beta)
                 turn = chess.WHITE
                 continue
+        print(self.board)
+        print("WHITE WINS" if turn==chess.BLACK else "BLACK WINS")
         return
 
     
